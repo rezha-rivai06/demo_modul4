@@ -1,0 +1,150 @@
+### =========================================================================
+### FLIPPLAY REST API - UJI ENDPOINT (DEMO MODUL 4)
+### Urutan uji sesuai Alur yang Diharapkan & Pengujian (Modul 4 hal. 29-30)
+### Jalankan server terlebih dahulu: php artisan serve
+### =========================================================================
+
+@baseUrl = http://127.0.0.1:8000/api
+
+### -------------------------------------------------------------------------
+### HAPPY PATH (ALUR SUKSES)
+### -------------------------------------------------------------------------
+
+### 1. List seluruh media tersedia (GET Index + Pagination + Eager Load users)
+GET {{baseUrl}}/media
+Accept: application/json
+
+### 2. Cari media berdasarkan judul (Query Filter ?search=)
+GET {{baseUrl}}/media?search=Frieren
+Accept: application/json
+
+### 3. Lihat detail 1 media beserta pengguna yang memasukkannya ke koleksi
+GET {{baseUrl}}/media/1
+Accept: application/json
+
+### 4. Tambah media baru bertipe Movie (POST -> 201 Created)
+POST {{baseUrl}}/media
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Inception",
+  "type": "movie",
+  "genre": "Sci-Fi, Action",
+  "rating": 8.8,
+  "release_year": 2010,
+  "duration_minutes": 148,
+  "director": "Christopher Nolan"
+}
+
+### 5. Tambah media baru bertipe Anime (POST -> 201 Created)
+POST {{baseUrl}}/media
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Fullmetal Alchemist: Brotherhood",
+  "type": "anime",
+  "genre": "Action, Adventure",
+  "rating": 9.2,
+  "release_year": 2009,
+  "total_episodes": 64,
+  "studio": "Bones"
+}
+
+### 6. Update sebagian data media tanpa bentrok validasi unique judul (PATCH -> 200 OK)
+PATCH {{baseUrl}}/media/5
+Content-Type: application/json
+Accept: application/json
+
+{
+  "rating": 9.0,
+  "genre": "Sci-Fi, Thriller"
+}
+
+### 7. Tambah media ke koleksi pribadi pengguna (POST attach -> 201 Created)
+### Contoh: Bob (user 2) menambahkan Spirited Away (media 3)
+POST {{baseUrl}}/users/2/collection
+Content-Type: application/json
+Accept: application/json
+
+{
+  "media_id": 3
+}
+
+### 8. Tampilkan koleksi media milik seorang pengguna (GET -> 200 OK)
+GET {{baseUrl}}/users/2/collection
+Accept: application/json
+
+### 9. Hapus media dari koleksi pengguna (DELETE detach -> 200 OK)
+DELETE {{baseUrl}}/users/2/collection/3
+Accept: application/json
+
+### 10. Hapus media dari sistem (DELETE -> 200 OK)
+DELETE {{baseUrl}}/media/5
+Accept: application/json
+
+
+### -------------------------------------------------------------------------
+### FAILURE PATH (PENGUJIAN VALIDASI & ERROR HANDLING)
+### -------------------------------------------------------------------------
+
+### 11. Tambah media dengan judul kosong -> 422 Unprocessable Entity
+POST {{baseUrl}}/media
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "",
+  "type": "movie",
+  "genre": "Drama",
+  "rating": 8.0,
+  "release_year": 2022,
+  "duration_minutes": 110,
+  "director": "Unknown"
+}
+
+### 12. Tambah media dengan judul duplikat -> 422 Unprocessable Entity
+POST {{baseUrl}}/media
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Sousou no Frieren",
+  "type": "anime",
+  "genre": "Adventure",
+  "rating": 9.1,
+  "release_year": 2023,
+  "total_episodes": 28,
+  "studio": "Madhouse"
+}
+
+### 13. Tambah media tipe movie tanpa durasi & sutradara -> 422 Unprocessable Entity
+POST {{baseUrl}}/media
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Dune Part Two",
+  "type": "movie",
+  "genre": "Sci-Fi",
+  "rating": 8.6,
+  "release_year": 2024
+}
+
+### 14. Tambah media yang sama 2x ke koleksi Alice (media_id 1 sudah ada) -> 409 Conflict
+POST {{baseUrl}}/users/1/collection
+Content-Type: application/json
+Accept: application/json
+
+{
+  "media_id": 1
+}
+
+### 15. Hapus media yang tidak ada di koleksi user -> 404 Not Found
+DELETE {{baseUrl}}/users/2/collection/1
+Accept: application/json
+
+### 16. Akses detail media ID yang tidak ada -> 404 Not Found
+GET {{baseUrl}}/media/9999
+Accept: application/json
