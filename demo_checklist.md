@@ -1,87 +1,86 @@
-# Panduan Presentasi & Daftar Pamer Demo Modul 4 (Target Skor Maksimal 90%)
+# Peta Demo & Audit Rubrik Modul 4 — FlipPlay REST API (Target 80% + 10% Pemahaman)
 
-Dokumen ini adalah **skrip presentasi demo** agar saat berhadapan dengan asisten laboratorium, kamu tampil terstruktur layaknya *Fullstack Engineer* dan seluruh poin penilaian (Demo **80%** + Pemahaman **10%**) langsung terlihat jelas tanpa ada yang terlewat.
+Dokumen ini adalah **peta penunjuk langsung ("Ini filenya, ini barisnya, ini Postman-nya")** untuk memastikan **80% poin Demo + 10% poin Pemahaman** aman tanpa ada satu pun ketentuan di Modul 4 (halaman 29–31) yang terlewat saat demo pukul **16:55**.
 
 ---
 
-## 0. Persiapan 1 Menit Sebelum Demo Dimulai
+## 0. Checklist Persiapan Jam 16:50 (5 Menit Sebelum Dipanggil Aslab)
 
-1. **Pastikan Laragon (MySQL) menyala** dan database bersih dari sisa uji coba sebelumnya:
+1. Pastikan **Laragon (MySQL)** aktif hijau.
+2. Reset database agar data bersih & ID urut mulai dari awal (`Alice=1`, `Bob=2`, `Media 1..4`):
    ```cmd
    php artisan migrate:fresh --seed
    ```
-2. **Jalankan server Laravel:**
-   ```cmd
-   php artisan serve
-   ```
-3. **Buka tab berikut di VS Code** agar tinggal klik tanpa cari-cari folder:
-   - `routes/api.php`
-   - `database/migrations/2026_11_25_155447_create_media_table.php`
-   - `database/migrations/2026_11_25_155457_create_media_user_table.php`
-   - `app/Models/Media.php` & `app/Models/User.php`
-   - `app/Http/Requests/StoreMediaRequest.php` & `AddToCollectionRequest.php`
-   - `app/Http/Resources/MediaResource.php` & `UserResource.php`
-   - `app/Http/Controllers/MediaController.php` & `UserController.php`
-4. **Buka Postman** yang sudah meng-import `postman_collection.json` (16 request sudah tersusun rapi dalam folder `1. Happy Path` & `2. Failure Path`).
-
----
-
-## 1. Urutan Hal yang Harus Diperlihatkan Saat Demo
-
-### A. Bukti Repo GitHub & Routing (`Ketentuan Demo #1 & #7`)
-1. Perlihatkan folder project `demo_modul4` dan repository GitHub `rezha-rivai06/demo_modul4` (atau `git status` / `git remote -v`).
-2. Di terminal, jalankan:
+3. Cek semua route terdaftar (siapkan terminalnya untuk ditunjukkan ke aslab):
    ```cmd
    php artisan route:list --path=api
    ```
-   * **Poin yang diucapkan:** *"Semua 10 endpoint sudah didaftarkan di `routes/api.php`, termasuk `apiResource('media')` dengan parameter eksplisit `{media}` dan custom route koleksi user."*
-
-### B. Struktur Database, Migration & Relasi Eloquent (**Bobot 20%**)
-1. Buka `create_media_table.php` dan `create_media_user_table.php`:
-   * **Poin yang diucapkan:** *"Struktur FlipPlay Modul 3 (Movie & Anime) kami petakan ke tabel `media` dengan constraint `title->unique()`, dan relasi Many-to-Many dihubungkan lewat pivot table `media_user` (penamaan alfabetis Laravel) dengan `cascadeOnDelete()` dan composite unique `[media_id, user_id]`."*
-2. Buka `Media.php` dan `User.php`:
-   * **Poin yang diucapkan:** *"Di kedua model didefinisikan relasi `belongsToMany`, plus `$table = 'media'` di `Media` serta query scope `scopeSearch()` untuk filter judul."*
-
-### C. Form Request Validation (**Bobot 15%**)
-1. Buka `StoreMediaRequest.php` dan `AddToCollectionRequest.php`:
-   * **Poin yang diucapkan:** *"Semua endpoint `POST` dan `PATCH` memakai Form Request Validation. Aturan `POST` menggunakan `required` + `unique:media,title` + `required_if:type`, sedangkan `PATCH` memakai `sometimes` dan `Rule::unique()->ignore($mediaId)` agar update sebagian tidak bentrok dengan judulnya sendiri."*
-
-### D. API Resource & Eager Loading (**Bobot 10%**)
-1. Buka `MediaResource.php` dan `UserResource.php`:
-   * **Poin yang diucapkan:** *"Response JSON distandarkan lewat API Resource. Relasi `users` dan `media` dibungkus `whenLoaded()` untuk mencegah N+1 query dan circular reference, sedangkan atribut spesifik Movie/Anime memakai `$this->when()` agar JSON bersih sesuai tipenya."*
-
-### E. Controller CRUD & Custom Action (**Bobot 20% + 10% = 30%**)
-1. Buka `MediaController.php`:
-   * Tunjukkan 5 method standar (`index`, `show`, `store`, `update`, `destroy`), penggunaan `with('users')` / `load('users')`, filter `?search=` / `?title=`, serta status `201 Created` di `store()`.
-2. Buka `UserController.php`:
-   * Tunjukkan `addToCollection()` (`attach()` + pengecekan duplikat **`409 Conflict`**) dan `removeFromCollection()` (`detach()` + pengecekan **`404 Not Found`**).
-
-### F. Live Testing di Postman (**Bobot 5%**)
-Tunjukkan alur **Happy Path** lalu **Failure Path** secara berurutan:
-1. `POST /api/media` (Movie *Inception*) $\rightarrow$ **`201 Created`**
-2. `GET /api/media` $\rightarrow$ **`200 OK`** (daftar media + `users`)
-3. `GET /api/media?search=Frieren` $\rightarrow$ **`200 OK`** (filter judul)
-4. `GET /api/media/1` $\rightarrow$ **`200 OK`** (detail + `Alice`)
-5. `PATCH /api/media/5` $\rightarrow$ **`200 OK`** (update rating tanpa error `unique`)
-6. `POST /api/users/2/collection` (`media_id: 5`) $\rightarrow$ **`201 Created`** (`attach`)
-7. `GET /api/users/2/collection` $\rightarrow$ **`200 OK`** (lihat koleksi Bob)
-8. `DELETE /api/users/2/collection/5` $\rightarrow$ **`200 OK`** (`detach`)
-9. **Failure Path:**
-   - `POST /api/media` judul kosong / duplikat $\rightarrow$ **`422 Unprocessable Entity`**
-   - `POST /api/users/1/collection` (`media_id: 1` yang sudah dimiliki Alice) $\rightarrow$ **`409 Conflict`**
-   - `GET /api/media/9999` $\rightarrow$ **`404 Not Found`**
-
-*(Tips cepat: Kamu juga bisa klik `...` di Collection Postman $\rightarrow$ **Run collection** untuk menunjukkan 16/16 test script hijau otomatis dalam 1 detik!)*
+4. Jalankan server Laravel:
+   ```cmd
+   php artisan serve
+   ```
+5. Buka **Postman** di collection **`FlipPlay REST API - Modul 4`** (folder `berhasil` `01`–`10` dan `gagal` `11`–`16`).
 
 ---
 
-## 2. Contekan Jawaban Pertanyaan Aslab (**Bobot Pemahaman 10%**)
+## 1. Peta Audit Rubrik Penilaian Demo (**Total 80%**)
+
+Gunakan tabel ini saat aslab mengecek poin demi poin pada **Rubrik Penilaian (Halaman 31)**:
+
+| No | Aspek Penilaian Rubrik | Bobot | File & Baris Kode yang Ditunjukkan | Bukti Uji di Postman | Status |
+| :---: | :--- | :---: | :--- | :--- | :---: |
+| **1** | **CRUD API lengkap** (`index`, `show`, `store`, `update`, `destroy`) dengan status code tepat | **20%** | • `app/Http/Controllers/MediaController.php`: `index()` (L18–28), `show()` (L33–36), `store()` (L41–48 -> `201`), `update()` (L53–58 -> `200`), `destroy()` (L63–70 -> `200`)<br>• `routes/api.php` (L8–10) | Folder `berhasil`: **`01`, `02`, `03`, `04`, `05`, `06`, `10`** & `gagal`: **`16`** (`404`) | `[x]` |
+| **2** | **Eloquent Relationship** (migration, relasi antar entitas, eager loading) | **20%** | • Migrations:<br>  - `0001_01_01_000000_create_users_table.php` (L14–22)<br>  - `2026_11_25_155447_create_media_table.php` (L14–31)<br>  - `2026_11_25_155457_create_media_user_table.php` (L14–22 `cascadeOnDelete()` & `unique`)<br>• Models:<br>  - `app/Models/Media.php` (L15 `$table`, L47–50 `users(): BelongsToMany`)<br>  - `app/Models/User.php` (L37–40 `media(): BelongsToMany`)<br>• Eager Loading:<br>  - `MediaController.php` (L22 `with('users')`, L35 `load('users')`, L57 `fresh('users')`)<br>  - `UserController.php` (L19 `with('media')`, L29 `load('media')`) | **`03`** (list + `users`), **`04`** (detail + `Alice`), **`08`** (koleksi `Bob`) | `[x]` |
+| **3** | **Form Request Validation & penanganan error 422** | **15%** | • `app/Http/Requests/StoreMediaRequest.php` (L24–84 `rules()`: `POST` vs `PATCH`, `unique:media,title`, `Rule::unique()->ignore($mediaId)`, `required_if:type`; L91–110 `messages()`)<br>• `app/Http/Requests/AddToCollectionRequest.php` (L22–41 `media_id` `required\|integer\|exists:media,id`) | Folder `gagal`: **`11`** (judul kosong `422`), **`12`** (judul duplikat `422`), **`13`** (field Movie kurang `422`) | `[x]` |
+| **4** | **API Resource** (format response konsisten, termasuk `whenLoaded`) | **10%** | • `app/Http/Resources/MediaResource.php` (L17–31: `$this->when()` Movie/Anime, L28 `whenLoaded('users')`)<br>• `app/Http/Resources/UserResource.php` (L17–22: L21 `whenLoaded('media')`) | **`01`–`08`** (JSON konsisten di wrapper `"data"`, atribut Movie/Anime bersih, relasi tampil hanya saat loaded) | `[x]` |
+| **5** | **Custom action di luar CRUD standar** (`attach`/`detach` relasi) | **10%** | • `routes/api.php` (L13–17)<br>• `app/Http/Controllers/UserController.php`:<br>  - `addToCollection()` (L36–52 `attach()` + cek duplikat **`409 Conflict`** L40–44)<br>  - `removeFromCollection()` (L57–71 `detach()` + cek **`404`** L59–63) | **`07`** (`attach` `201`), **`08`** (lihat koleksi `200`), **`09`** (`detach` `200`), **`14`** (duplikat `409`), **`15`** (detach kosong `404`) | `[x]` |
+| **6** | **Pengujian endpoint — happy path & failure path (Postman)** | **5%** | • Postman Collection **`FlipPlay REST API - Modul 4`**<br>• Panduan urutan: `pengujian.md`<br>• Automated Test: `tests/Feature/FlipPlayApiTest.php` (`6 tests, 73 assertions passed`) | Jalankan urut **`01` s/d `16`** di Postman | `[x]` |
+
+---
+
+## 2. Peta Audit Teks Modul: Ketentuan Demo & Alur yang Diharapkan (Hal. 29–30)
+
+### A. Evolusi FlipPlay Modul 3 $\rightarrow$ Modul 4
+* **Asal OOP CLI (`demo_modul3`):** `Media`, `Movie`, `Anime`, `User`, dan `FlipPlayEngine`.
+* **Wujud Laravel 13 REST API (`demo_modul4`):**
+  * Atribut `Media`, `Movie` (`duration_minutes`, `director`), dan `Anime` (`total_episodes`, `studio`) disatukan rapi di migration `create_media_table` dan dipilah kembali secara bersih di `MediaResource` memakai `$this->when($this->type === ...)`.
+  * `FlipPlayEngine::searchByTitle()` berevolusi menjadi `Media::scopeSearch()` (L55–62 di `Media.php`) yang dipanggil di `MediaController::index()` (L20–25).
+  * `User::$watchlist` + `addToWatchlist()` berevolusi menjadi relasi Many-to-Many `belongsToMany` lewat pivot `media_user` + `UserController::addToCollection()` & `removeFromCollection()`.
+
+### B. 8 Ketentuan Demo
+| No | Ketentuan Demo di Modul | File / Bukti yang Ditunjukkan | Status |
+| :---: | :--- | :--- | :---: |
+| 1 | Buat satu repositori GitHub dan buat project Laravel di repo tersebut | Repo `rezha-rivai06/demo_modul4` (commit `71952c5` sudah ter-push) | `[x]` |
+| 2 | Minimal dua entitas dengan relasi Eloquent `belongsToMany` | `app/Models/Media.php` (L47–50) & `app/Models/User.php` (L37–40) | `[x]` |
+| 3 | Migration mendefinisikan struktur tabel + foreign key/pivot table M:N | `create_users_table.php`, `create_media_table.php`, `create_media_user_table.php` | `[x]` |
+| 4 | Controller CRUD standar (`index`, `show`, `store`, `update`, `destroy`) untuk Media | `app/Http/Controllers/MediaController.php` (L18–70) | `[x]` |
+| 5 | Form Request Validation pada endpoint input (`POST`/`PATCH`), judul wajib & anti-duplikat | `StoreMediaRequest.php` (L32–37) & `AddToCollectionRequest.php` (L22–27) | `[x]` |
+| 6 | API Resource konsisten termasuk `whenLoaded` | `MediaResource.php` (L28) & `UserResource.php` (L21) | `[x]` |
+| 7 | Seluruh endpoint terdaftar di `routes/api.php` & terbaca di `php artisan route:list` | `routes/api.php` (L8–17) + jalankan `php artisan route:list --path=api` (10 routes) | `[x]` |
+| 8 | Minimal satu custom action di luar CRUD standar untuk ubah relasi antartabel | `UserController::addToCollection()` (`attach`) & `removeFromCollection()` (`detach`) | `[x]` |
+
+### C. 7 Alur yang Diharapkan & Pengujian Postman
+| Urutan Modul | Skenario | Endpoint & Method | Request Postman | Status |
+| :--- | :--- | :--- | :---: | :---: |
+| Tambah media baru (judul, jenis, genre, dll.) | `Movie` & `Anime` | `POST /api/media` $\rightarrow$ `201` | **`01` & `02`** | `[x]` |
+| Tampilkan daftar seluruh media | Index + Eager Load | `GET /api/media` $\rightarrow$ `200` | **`03`** | `[x]` |
+| Tampilkan detail 1 media + pengguna kolektor | Show + `load('users')` | `GET /api/media/1` $\rightarrow$ `200` | **`04`** | `[x]` |
+| Cari media berdasarkan judul | Query Filter | `GET /api/media?search=Frieren` $\rightarrow$ `200` | **`05`** | `[x]` |
+| *(Tambahan CRUD lengkap)* Update & Hapus media | Update & Delete | `PATCH /api/media/5` & `DELETE /api/media/6` $\rightarrow$ `200` | **`06` & `10`** | `[x]` |
+| Tambah media ke koleksi pribadi pengguna | Custom `attach()` | `POST /api/users/2/collection` $\rightarrow$ `201` | **`07`** | `[x]` |
+| Tampilkan koleksi media milik pengguna | Show Collection | `GET /api/users/2/collection` $\rightarrow$ `200` | **`08`** | `[x]` |
+| Hapus media dari koleksi pengguna | Custom `detach()` | `DELETE /api/users/2/collection/5` $\rightarrow$ `200` | **`09`** | `[x]` |
+| **Pengujian Failure Path** | Validasi kosong/duplikat/missing fields (`422`), Duplikat koleksi (`409`), Data tidak ada (`404`) | `POST /api/media`, `POST /api/users/1/collection`, `DELETE`, `GET` | **`11` s/d `16`** | `[x]` |
+
+---
+
+## 3. Contekan Jawaban Pertanyaan Aslab (**Bobot Pemahaman 10%**)
 
 | Pertanyaan yang Sering Muncul | Jawaban Tepat & Singkat |
 | :--- | :--- |
-| **Kenapa nama tabel pivot-nya `media_user`, bukan `user_media`?** | Karena konvensi Laravel menggabungkan nama singular kedua model secara alfabetis (`m` sebelum `u`), sehingga Eloquent otomatis mengenalinya tanpa perlu definisi manual nama tabel di `belongsToMany`. |
-| **Apa fungsi `whenLoaded()` di API Resource?** | Untuk memastikan relasi hanya diserialisasi ke JSON jika controller memang sudah memanggil eager loading (`with()` / `load()`). Ini mencegah *N+1 query problem* dan sekaligus mencegah *infinite loop* antara `MediaResource` dan `UserResource`. |
-| **Kenapa di `routes/api.php` pakai `->parameters(['media' => 'media'])`?** | Karena pluralizer bahasa Inggris di Laravel menganggap `medium` sebagai bentuk singular dari `media`. Tanpa `->parameters()`, Route Model Binding bisa gagal karena parameter default-nya menjadi `{medium}` sementara controller menerima `Media $media`. |
-| **Kenapa `PATCH` pakai `Rule::unique()->ignore($mediaId)`?** | Agar saat mengupdate data media tanpa mengganti judulnya (atau mengirim ulang judul yang sama), database tidak menganggap record tersebut menduplikasi dirinya sendiri. |
-| **Apa bedanya error `422` dan `409` di API ini?** | `422 Unprocessable Entity` dipakai saat validasi format/aturan input gagal (misal judul kosong atau duplikat di `FormRequest`). Sedangkan `409 Conflict` dipakai saat input secara format valid, tetapi bertentangan dengan state relasi yang sudah ada (menambahkan media yang sama 2x ke koleksi user). |
-| **Apa bedanya CRUD standar dengan custom action `attach()` / `detach()`?** | CRUD standar memanipulasi baris pada tabel entitas utama (`media`), sedangkan custom action `attach()` dan `detach()` hanya menambah atau menghapus baris relasi pada tabel pivot `media_user` tanpa menghapus data `Media` maupun `User`-nya. |
+| **Kenapa nama tabel pivot-nya `media_user`, bukan `user_media`?** | Karena konvensi Laravel menggabungkan nama singular kedua model secara alfabetis (`m` sebelum `u`), sehingga Eloquent otomatis mengenalinya tanpa definisi manual nama tabel di `belongsToMany`. |
+| **Apa fungsi `whenLoaded()` di API Resource?** | Memastikan relasi hanya diserialisasi ke JSON jika controller sudah memanggil eager loading (`with()` / `load()`). Ini mencegah *N+1 query problem* dan mencegah *infinite loop* antara `MediaResource` dan `UserResource`. |
+| **Kenapa di `routes/api.php` pakai `->parameters(['media' => 'media'])`?** | Karena pluralizer bahasa Inggris Laravel menganggap `medium` sebagai bentuk singular dari `media`. Tanpa `->parameters()`, parameter route default menjadi `{medium}` sementara controller memakai `Media $media`. |
+| **Kenapa `PATCH` pakai `Rule::unique()->ignore($mediaId)`?** | Agar saat mengupdate field lain pada media tanpa mengganti judul (atau mengirim judul yang sama), validasi `unique` tidak menganggap record tersebut menduplikasi dirinya sendiri. |
+| **Apa bedanya error `422` dan `409` di API ini?** | `422 Unprocessable Entity` untuk input yang gagal aturan validasi `FormRequest` (judul kosong/duplikat). `409 Conflict` untuk input yang valid secara format, tapi bertentangan dengan state relasi yang sudah ada (menambah media yang sama 2x ke koleksi user). |
+| **Apa bedanya CRUD standar dengan custom action `attach()` / `detach()`?** | CRUD standar memanipulasi row di tabel entitas utama (`media`), sedangkan `attach()` / `detach()` hanya menambah atau menghapus row relasi pada pivot table `media_user` tanpa menghapus data `Media` maupun `User`. |
